@@ -12,7 +12,53 @@
             <img src="images/jsr-character.png" alt="Jet Set Radio Character" class="logo-image">
         </div>
         <h1>JUNGLIST UNITE</h1>
+        <div class="help-hint">Press H for Controls</div>
         
+        <div id="help-overlay" class="help-overlay">
+            <div class="help-content">
+                <h2>Keyboard Controls</h2>
+                <p>Hold these keys + Left/Right Arrow to adjust:</p>
+                <div class="key-grid">
+                    <div class="key-row">
+                        <span class="key">F</span> Filter Frequency (±100 Hz)
+                    </div>
+                    <div class="key-row">
+                        <span class="key">Q</span> Resonance
+                    </div>
+                    <div class="key-row">
+                        <span class="key">D</span> Drive Amount
+                    </div>
+                    <div class="key-row">
+                        <span class="key">M</span> Modulation Rate
+                    </div>
+                    <div class="key-row">
+                        <span class="key">N</span> Modulation Depth
+                    </div>
+                    <div class="key-row">
+                        <span class="key">T</span> Delay Time
+                    </div>
+                    <div class="key-row">
+                        <span class="key">B</span> Delay Feedback
+                    </div>
+                    <div class="key-row">
+                        <span class="key">E</span> Echo Mix
+                    </div>
+                </div>
+                <div class="special-keys">
+                    <div class="key-row">
+                        <span class="key">SHIFT</span> + any control for larger changes
+                    </div>
+                    <div class="key-row">
+                        <span class="key">R</span> Reset all effects
+                    </div>
+                    <div class="key-row">
+                        <span class="key">H</span> Toggle this help screen
+                    </div>
+                </div>
+                <button class="close-help" onclick="document.getElementById('help-overlay').style.display='none'">Close</button>
+            </div>
+        </div>
+
         <div class="controls">
             <div class="oscilloscope-container">
                 <canvas id="oscilloscope"></canvas>
@@ -55,6 +101,53 @@
                     <label for="tempo">Tempo: </label>
                     <input type="range" id="tempo" min="60" max="200" value="160">
                     <span id="tempo-value">160 BPM</span>
+                </div>
+            </div>
+
+            <div class="effects-panel">
+                <h2>Live Effects</h2>
+                <div class="effects-header">
+                    <button id="reset-effects" class="reset-button">Reset Effects (R)</button>
+                </div>
+                <div class="effect-control">
+                    <label for="filter-freq">Filter Freq (F)</label>
+                    <input type="range" id="filter-freq" min="20" max="20000" value="20000">
+                    <span class="effect-value" id="filter-freq-value">20000 Hz</span>
+                </div>
+                <div class="effect-control">
+                    <label for="resonance">Resonance (Q)</label>
+                    <input type="range" id="resonance" min="0" max="20" value="0">
+                    <span class="effect-value" id="resonance-value">0</span>
+                </div>
+                <div class="effect-control">
+                    <label for="drive">Drive (D)</label>
+                    <input type="range" id="drive" min="0" max="100" value="0">
+                    <span class="effect-value" id="drive-value">0%</span>
+                </div>
+                <div class="effect-control">
+                    <label for="mod-rate">Mod Rate (M)</label>
+                    <input type="range" id="mod-rate" min="0" max="20" value="0">
+                    <span class="effect-value" id="mod-rate-value">0 Hz</span>
+                </div>
+                <div class="effect-control">
+                    <label for="mod-depth">Mod Depth (N)</label>
+                    <input type="range" id="mod-depth" min="0" max="100" value="0">
+                    <span class="effect-value" id="mod-depth-value">0%</span>
+                </div>
+                <div class="effect-control">
+                    <label for="delay-time">Delay Time (T)</label>
+                    <input type="range" id="delay-time" min="0" max="1000" value="0">
+                    <span class="effect-value" id="delay-time-value">0 ms</span>
+                </div>
+                <div class="effect-control">
+                    <label for="delay-feedback">Feedback (B)</label>
+                    <input type="range" id="delay-feedback" min="0" max="90" value="0">
+                    <span class="effect-value" id="delay-feedback-value">0%</span>
+                </div>
+                <div class="effect-control">
+                    <label for="echo-amount">Echo Mix (E)</label>
+                    <input type="range" id="echo-amount" min="0" max="100" value="0">
+                    <span class="effect-value" id="echo-amount-value">0%</span>
                 </div>
             </div>
         </div>

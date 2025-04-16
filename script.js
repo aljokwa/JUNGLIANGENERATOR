@@ -6,6 +6,60 @@ class JungleGenerator {
         this.bufferLength = this.analyser.frequencyBinCount;
         this.dataArray = new Uint8Array(this.bufferLength);
         
+        // Create master effects chain
+        this.masterFilter = this.audioContext.createBiquadFilter();
+        this.masterFilter.type = 'lowpass';
+        this.masterFilter.frequency.value = 20000;
+        this.masterFilter.Q.value = 0;
+
+        this.masterDrive = this.audioContext.createWaveShaper();
+        this.masterDrive.curve = this.makeDistortionCurve(0);
+
+        // Create delay and echo effects
+        this.delay = this.audioContext.createDelay(1.0);
+        this.delay.delayTime.value = 0;
+        
+        this.delayFeedback = this.audioContext.createGain();
+        this.delayFeedback.gain.value = 0;
+        
+        this.echoMix = this.audioContext.createGain();
+        this.echoMix.gain.value = 0;
+        
+        this.dryGain = this.audioContext.createGain();
+        this.dryGain.gain.value = 1;
+
+        this.modulator = this.audioContext.createOscillator();
+        this.modulatorGain = this.audioContext.createGain();
+        this.modulator.connect(this.modulatorGain);
+        this.modulator.start();
+        this.modulatorGain.gain.value = 0;
+        
+        // Create and connect master gain
+        this.masterGain = this.audioContext.createGain();
+        this.masterGain.gain.value = 0.5;
+        
+        // Connect master effects chain
+        this.masterGain.connect(this.masterFilter);
+        this.masterFilter.connect(this.masterDrive);
+        
+        // Connect delay chain
+        this.masterDrive.connect(this.delay);
+        this.delay.connect(this.delayFeedback);
+        this.delayFeedback.connect(this.delay);
+        this.delay.connect(this.echoMix);
+        
+        // Mix dry and wet signals
+        this.masterDrive.connect(this.dryGain);
+        this.dryGain.connect(this.analyser);
+        this.echoMix.connect(this.analyser);
+        
+        this.analyser.connect(this.audioContext.destination);
+        this.modulatorGain.connect(this.masterFilter.frequency);
+        
+        // Initialize keyboard control
+        this.initKeyboardControls();
+        
+        // Initialize other properties
         this.tempo = 160;
         this.isPlaying = false;
         this.currentStep = 0;
@@ -53,6 +107,42 @@ class JungleGenerator {
             this.tempo = parseInt(e.target.value);
             tempoValue.textContent = `${this.tempo} BPM`;
         });
+
+        // Effects controls
+        document.getElementById('filter-freq').addEventListener('input', (e) => {
+            this.updateFilterFreq(parseFloat(e.target.value));
+        });
+
+        document.getElementById('resonance').addEventListener('input', (e) => {
+            this.updateResonance(parseFloat(e.target.value));
+        });
+
+        document.getElementById('drive').addEventListener('input', (e) => {
+            this.updateDrive(parseFloat(e.target.value));
+        });
+
+        document.getElementById('mod-rate').addEventListener('input', (e) => {
+            this.updateModRate(parseFloat(e.target.value));
+        });
+
+        document.getElementById('mod-depth').addEventListener('input', (e) => {
+            this.updateModDepth(parseFloat(e.target.value));
+        });
+
+        document.getElementById('delay-time').addEventListener('input', (e) => {
+            this.updateDelayTime(parseFloat(e.target.value));
+        });
+
+        document.getElementById('delay-feedback').addEventListener('input', (e) => {
+            this.updateDelayFeedback(parseFloat(e.target.value));
+        });
+
+        document.getElementById('echo-amount').addEventListener('input', (e) => {
+            this.updateEchoAmount(parseFloat(e.target.value));
+        });
+
+        // Reset button
+        document.getElementById('reset-effects').addEventListener('click', () => this.resetEffects());
     }
     
     initOscilloscope() {
@@ -91,10 +181,6 @@ class JungleGenerator {
     }
     
     setupAudioNodes() {
-        // Create a master gain node
-        this.masterGain = this.audioContext.createGain();
-        this.masterGain.gain.value = 0.5; // Set master volume
-        
         // Create audio nodes for each instrument
         this.instruments = {
             kick: this.createKick(),
@@ -109,10 +195,6 @@ class JungleGenerator {
         Object.values(this.instruments).forEach(instrument => {
             instrument.connect(this.masterGain);
         });
-        
-        // Connect master gain to analyser and destination
-        this.masterGain.connect(this.analyser);
-        this.analyser.connect(this.audioContext.destination);
     }
     
     createKick() {
@@ -576,6 +658,174 @@ class JungleGenerator {
 
         // Update UI
         this.updateStepVisualization();
+    }
+
+    initKeyboardControls() {
+        // Keep track of which keys are currently pressed
+        this.pressedKeys = new Set();
+        this.lastKeyTime = 0;
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return; // Don't handle if user is typing in an input
+            
+            const key = e.key.toLowerCase();
+            const currentTime = Date.now();
+            
+            // Add key to pressed keys
+            this.pressedKeys.add(key);
+            this.lastKeyTime = currentTime;
+
+            // Handle help key
+            if (key === 'h') {
+                this.toggleHelp();
+                return;
+            }
+
+            // Handle reset key
+            if (key === 'r') {
+                this.resetEffects();
+                return;
+            }
+
+            // Check if we have an arrow key and an effect key pressed
+            const hasLeftArrow = this.pressedKeys.has('arrowleft');
+            const hasRightArrow = this.pressedKeys.has('arrowright');
+            
+            if (!hasLeftArrow && !hasRightArrow) return;
+
+            const effectKey = {
+                'f': 'filter-freq',
+                'q': 'resonance',
+                'd': 'drive',
+                'm': 'mod-rate',
+                'n': 'mod-depth',
+                't': 'delay-time',
+                'b': 'delay-feedback',
+                'e': 'echo-amount'
+            };
+
+            // Find which effect key is pressed (if any)
+            let activeEffect = null;
+            for (const [k, v] of Object.entries(effectKey)) {
+                if (this.pressedKeys.has(k)) {
+                    activeEffect = v;
+                    break;
+                }
+            }
+
+            if (!activeEffect) return;
+
+            const input = document.getElementById(activeEffect);
+            const currentValue = parseFloat(input.value);
+            const min = parseFloat(input.min);
+            const max = parseFloat(input.max);
+            
+            // Special larger step for frequency
+            let step;
+            if (activeEffect === 'filter-freq') {
+                step = e.shiftKey ? 1000 : 100;
+            } else {
+                step = e.shiftKey ? 10 : 1;
+            }
+
+            if (hasRightArrow) {
+                input.value = Math.min(max, currentValue + step);
+                input.dispatchEvent(new Event('input'));
+            } else if (hasLeftArrow) {
+                input.value = Math.max(min, currentValue - step);
+                input.dispatchEvent(new Event('input'));
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            this.pressedKeys.delete(key);
+            
+            // Clear all pressed keys if we haven't had a keydown in a while
+            if (Date.now() - this.lastKeyTime > 1000) {
+                this.pressedKeys.clear();
+            }
+        });
+
+        // Cleanup handler for when window loses focus
+        window.addEventListener('blur', () => {
+            this.pressedKeys.clear();
+        });
+    }
+
+    toggleHelp() {
+        const helpOverlay = document.getElementById('help-overlay');
+        if (helpOverlay) {
+            helpOverlay.style.display = helpOverlay.style.display === 'none' ? 'flex' : 'none';
+        }
+    }
+
+    updateFilterFreq(value) {
+        this.masterFilter.frequency.value = value;
+        document.getElementById('filter-freq-value').textContent = `${value} Hz`;
+    }
+
+    updateResonance(value) {
+        this.masterFilter.Q.value = value;
+        document.getElementById('resonance-value').textContent = value.toFixed(1);
+    }
+
+    updateDrive(value) {
+        this.masterDrive.curve = this.makeDistortionCurve(value * 4);
+        document.getElementById('drive-value').textContent = `${value}%`;
+    }
+
+    updateModRate(value) {
+        this.modulator.frequency.value = value;
+        document.getElementById('mod-rate-value').textContent = `${value} Hz`;
+    }
+
+    updateModDepth(value) {
+        this.modulatorGain.gain.value = value * 100;
+        document.getElementById('mod-depth-value').textContent = `${value}%`;
+    }
+
+    updateDelayTime(value) {
+        this.delay.delayTime.value = value / 1000;
+        document.getElementById('delay-time-value').textContent = `${value} ms`;
+    }
+
+    updateDelayFeedback(value) {
+        this.delayFeedback.gain.value = value / 100;
+        document.getElementById('delay-feedback-value').textContent = `${value}%`;
+    }
+
+    updateEchoAmount(value) {
+        const mix = value / 100;
+        this.echoMix.gain.value = mix;
+        this.dryGain.gain.value = 1 - (mix * 0.5);
+        document.getElementById('echo-amount-value').textContent = `${value}%`;
+    }
+
+    resetEffects() {
+        // Reset filter
+        this.updateFilterFreq(20000);
+        this.updateResonance(0);
+        document.getElementById('filter-freq').value = 20000;
+        document.getElementById('resonance').value = 0;
+
+        // Reset drive
+        this.updateDrive(0);
+        document.getElementById('drive').value = 0;
+
+        // Reset modulation
+        this.updateModRate(0);
+        this.updateModDepth(0);
+        document.getElementById('mod-rate').value = 0;
+        document.getElementById('mod-depth').value = 0;
+
+        // Reset delay and echo
+        this.updateDelayTime(0);
+        this.updateDelayFeedback(0);
+        this.updateEchoAmount(0);
+        document.getElementById('delay-time').value = 0;
+        document.getElementById('delay-feedback').value = 0;
+        document.getElementById('echo-amount').value = 0;
     }
 }
 
