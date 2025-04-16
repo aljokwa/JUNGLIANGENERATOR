@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jungle Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>JUNGLIST UNITE </h1>
+        
+        <div class="controls">
+            <div class="oscilloscope-container">
+                <canvas id="oscilloscope"></canvas>
+            </div>
+            
+            <div class="pattern-controls">
+                <div class="pattern-row">
+                    <label>Kick</label>
+                    <div class="steps" id="kick-pattern"></div>
+                </div>
+                <div class="pattern-row">
+                    <label>Snare</label>
+                    <div class="steps" id="snare-pattern"></div>
+                </div>
+                <div class="pattern-row">
+                    <label>Hi-Hat</label>
+                    <div class="steps" id="hihat-pattern"></div>
+                </div>
+                <div class="pattern-row">
+                    <label>Bass</label>
+                    <div class="steps" id="bass-pattern"></div>
+                </div>
+                <div class="pattern-row">
+                    <label>Overdrive</label>
+                    <div class="steps" id="overdrive-pattern"></div>
+                </div>
+            </div>
+
+            <div class="transport-controls">
+                <button id="play">Play</button>
+                <button id="stop">Stop</button>
+                <button id="clear">Clear All</button>
+                <button id="randomize">Randomize</button>
+                <div class="tempo-control">
+                    <label for="tempo">Tempo: </label>
+                    <input type="range" id="tempo" min="60" max="200" value="160">
+                    <span id="tempo-value">160 BPM</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
