@@ -16,7 +16,8 @@ class JungleGenerator {
             snare: new Array(this.stepsPerPattern).fill(false),
             hihat: new Array(this.stepsPerPattern).fill(false),
             bass: new Array(this.stepsPerPattern).fill(false),
-            overdrive: new Array(this.stepsPerPattern).fill(false)
+            overdrive: new Array(this.stepsPerPattern).fill(false),
+            vocal: new Array(this.stepsPerPattern).fill(false)
         };
         
         this.initUI();
@@ -43,6 +44,7 @@ class JungleGenerator {
         document.getElementById('stop').addEventListener('click', () => this.stop());
         document.getElementById('clear').addEventListener('click', () => this.clearAll());
         document.getElementById('randomize').addEventListener('click', () => this.randomizePattern());
+        document.getElementById('amen').addEventListener('click', () => this.loadAmenBreak());
         
         // Tempo control
         const tempoSlider = document.getElementById('tempo');
@@ -99,7 +101,8 @@ class JungleGenerator {
             snare: this.createSnare(),
             hihat: this.createHiHat(),
             bass: this.createBass(),
-            overdrive: this.createOverdrive()
+            overdrive: this.createOverdrive(),
+            vocal: this.createVocal()
         };
         
         // Connect all instruments to the analyser through master gain
@@ -276,6 +279,79 @@ class JungleGenerator {
         return overdrive;
     }
     
+    createVocal() {
+        const vocal = this.audioContext.createGain();
+        vocal.gain.value = 0.8; // Increased base volume
+        
+        // Create oscillator for the vocal sound
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 220; // A3 note
+        
+        // Create filter for vocal characteristics
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1000;
+        filter.Q.value = 2;
+        
+        // Create vibrato effect
+        const vibrato = this.audioContext.createOscillator();
+        vibrato.type = 'sine';
+        vibrato.frequency.value = 5; // 5 Hz vibrato
+        
+        const vibratoGain = this.audioContext.createGain();
+        vibratoGain.gain.value = 5; // 5 Hz depth
+        
+        // Add 90's style effects
+        // Distortion
+        const distortion = this.audioContext.createWaveShaper();
+        distortion.curve = this.makeDistortionCurve(200);
+        distortion.oversample = '4x';
+        
+        // Reverb
+        const reverb = this.audioContext.createConvolver();
+        const reverbTime = 2.0;
+        const sampleRate = this.audioContext.sampleRate;
+        const length = sampleRate * reverbTime;
+        const impulse = this.audioContext.createBuffer(2, length, sampleRate);
+        const impulseL = impulse.getChannelData(0);
+        const impulseR = impulse.getChannelData(1);
+        
+        for (let i = 0; i < length; i++) {
+            const n = length - i;
+            impulseL[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+            impulseR[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+        }
+        reverb.buffer = impulse;
+        
+        // EQ
+        const lowShelf = this.audioContext.createBiquadFilter();
+        lowShelf.type = 'lowshelf';
+        lowShelf.frequency.value = 500;
+        lowShelf.gain.value = 3;
+        
+        const highShelf = this.audioContext.createBiquadFilter();
+        highShelf.type = 'highshelf';
+        highShelf.frequency.value = 3000;
+        highShelf.gain.value = 2;
+        
+        // Connect nodes
+        vibrato.connect(vibratoGain);
+        vibratoGain.connect(osc.frequency);
+        osc.connect(filter);
+        filter.connect(distortion);
+        distortion.connect(lowShelf);
+        lowShelf.connect(highShelf);
+        highShelf.connect(reverb);
+        reverb.connect(vocal);
+        
+        // Store oscillators for later use
+        vocal.osc = osc;
+        vocal.vibrato = vibrato;
+        
+        return vocal;
+    }
+    
     makeDistortionCurve(amount) {
         const k = typeof amount === 'number' ? amount : 50;
         const n_samples = 44100;
@@ -356,6 +432,16 @@ class JungleGenerator {
                 gain.gain.linearRampToValueAtTime(1, now + 0.001);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
                 break;
+            case 'vocal':
+                // Start oscillators only when playing a note
+                if (!gain.osc.started) {
+                    gain.osc.start();
+                    gain.vibrato.start();
+                    gain.osc.started = true;
+                }
+                gain.gain.linearRampToValueAtTime(0.8, now + 0.001);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+                break;
         }
     }
     
@@ -430,7 +516,8 @@ class JungleGenerator {
             snare: 0.2,     // 20% chance for snare
             hihat: 0.4,     // 40% chance for hi-hat
             bass: 0.25,     // 25% chance for bass
-            overdrive: 0.2  // 20% chance for overdrive
+            overdrive: 0.2,  // 20% chance for overdrive
+            vocal: 0.15      // 15% chance for vocal
         };
         
         // Randomize each pattern
@@ -449,6 +536,46 @@ class JungleGenerator {
                 }
             });
         });
+    }
+    
+    loadAmenBreak() {
+        const amenButton = document.getElementById('amen');
+        const isActive = amenButton.classList.contains('active');
+        
+        if (!isActive) {
+            // Store current patterns before applying Amen Break
+            this.previousPatterns = {};
+            Object.keys(this.patterns).forEach(instrument => {
+                this.previousPatterns[instrument] = [...this.patterns[instrument]];
+            });
+            
+            // Classic Amen Break pattern
+            const amenPatterns = {
+                kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+                snare: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+                hihat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                bass: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+                overdrive: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                vocal: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            };
+
+            // Update patterns
+            Object.keys(amenPatterns).forEach(instrument => {
+                this.patterns[instrument] = [...amenPatterns[instrument]];
+            });
+            
+            amenButton.classList.add('active');
+        } else {
+            // Restore previous patterns
+            Object.keys(this.previousPatterns).forEach(instrument => {
+                this.patterns[instrument] = [...this.previousPatterns[instrument]];
+            });
+            
+            amenButton.classList.remove('active');
+        }
+
+        // Update UI
+        this.updateStepVisualization();
     }
 }
 
