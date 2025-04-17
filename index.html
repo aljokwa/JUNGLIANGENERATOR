@@ -66,11 +66,33 @@
                 </div>
                 <div class="equalizer-container">
                     <canvas id="equalizer"></canvas>
+                    <div class="eq-controls">
+                        <div class="eq-band">
+                            <input type="range" id="eq-20hz" min="-12" max="12" value="0" orient="vertical">
+                            <span>20Hz</span>
+                        </div>
+                        <div class="eq-band">
+                            <input type="range" id="eq-5k" min="-12" max="12" value="0" orient="vertical">
+                            <span>5kHz</span>
+                        </div>
+                        <div class="eq-band">
+                            <input type="range" id="eq-10k" min="-12" max="12" value="0" orient="vertical">
+                            <span>10kHz</span>
+                        </div>
+                        <div class="eq-band">
+                            <input type="range" id="eq-15k" min="-12" max="12" value="0" orient="vertical">
+                            <span>15kHz</span>
+                        </div>
+                        <div class="eq-band">
+                            <input type="range" id="eq-20k" min="-12" max="12" value="0" orient="vertical">
+                            <span>20kHz</span>
+                        </div>
+                    </div>
                     <div class="freq-labels">
                         <span>20Hz</span>
-                        <span>100Hz</span>
-                        <span>1kHz</span>
+                        <span>5kHz</span>
                         <span>10kHz</span>
+                        <span>15kHz</span>
                         <span>20kHz</span>
                     </div>
                 </div>

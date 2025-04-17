@@ -85,6 +85,15 @@ class JungleGenerator {
             vocal: new Array(this.stepsPerPattern).fill(false)
         };
         
+        // Create EQ nodes with more precise frequency bands
+        this.eqNodes = {
+            '20hz': this.createEQNode(20, 'lowshelf'),
+            '5k': this.createEQNode(5000, 'peaking'),
+            '10k': this.createEQNode(10000, 'peaking'),
+            '15k': this.createEQNode(15000, 'peaking'),
+            '20k': this.createEQNode(20000, 'highshelf')
+        };
+        
         this.initUI();
         this.initVisualizations();
         this.setupAudioNodes();
@@ -154,6 +163,13 @@ class JungleGenerator {
 
         // Reset button
         document.getElementById('reset-effects').addEventListener('click', () => this.resetEffects());
+
+        // Add event listeners for EQ controls
+        document.getElementById('eq-20hz').addEventListener('input', (e) => this.updateEQ('20hz', parseFloat(e.target.value)));
+        document.getElementById('eq-5k').addEventListener('input', (e) => this.updateEQ('5k', parseFloat(e.target.value)));
+        document.getElementById('eq-10k').addEventListener('input', (e) => this.updateEQ('10k', parseFloat(e.target.value)));
+        document.getElementById('eq-15k').addEventListener('input', (e) => this.updateEQ('15k', parseFloat(e.target.value)));
+        document.getElementById('eq-20k').addEventListener('input', (e) => this.updateEQ('20k', parseFloat(e.target.value)));
     }
     
     initVisualizations() {
@@ -901,6 +917,95 @@ class JungleGenerator {
         document.getElementById('delay-time').value = 0;
         document.getElementById('delay-feedback').value = 0;
         document.getElementById('echo-amount').value = 0;
+    }
+
+    createEQNode(frequency, type) {
+        const node = this.audioContext.createBiquadFilter();
+        node.type = type;
+        node.frequency.value = frequency;
+        
+        // Set Q values based on filter type and frequency
+        if (type === 'lowshelf') {
+            node.Q.value = 0.5;
+        } else if (type === 'highshelf') {
+            node.Q.value = 0.5;
+        } else {
+            // For peaking filters, adjust Q based on frequency
+            if (frequency <= 100) {
+                node.Q.value = 0.5;
+            } else if (frequency >= 10000) {
+                node.Q.value = 2.0;
+            } else {
+                node.Q.value = 1.0;
+            }
+        }
+        
+        node.gain.value = 0;
+        return node;
+    }
+    
+    connectNodes() {
+        // Create analyzers for visualization
+        this.oscilloscopeAnalyser = this.audioContext.createAnalyser();
+        this.oscilloscopeAnalyser.fftSize = 2048;
+        this.equalizerAnalyser = this.audioContext.createAnalyser();
+        this.equalizerAnalyser.fftSize = 2048;
+        
+        // Connect all instruments to master gain
+        Object.values(this.instruments).forEach(instrument => {
+            instrument.connect(this.masterGain);
+        });
+        
+        // Connect master gain to EQ chain
+        this.masterGain.connect(this.eqNodes['20hz']);
+        this.eqNodes['20hz'].connect(this.eqNodes['5k']);
+        this.eqNodes['5k'].connect(this.eqNodes['10k']);
+        this.eqNodes['10k'].connect(this.eqNodes['15k']);
+        this.eqNodes['15k'].connect(this.eqNodes['20k']);
+        
+        // Connect EQ chain to analyzers and effects
+        this.eqNodes['20k'].connect(this.oscilloscopeAnalyser);
+        this.eqNodes['20k'].connect(this.equalizerAnalyser);
+        this.eqNodes['20k'].connect(this.masterFilter);
+        
+        // Connect effects chain
+        this.masterFilter.connect(this.masterDrive);
+        
+        // Connect modulation
+        this.modulator.connect(this.modulatorGain);
+        this.modulatorGain.connect(this.masterFilter.frequency);
+        
+        // Connect delay
+        this.masterDrive.connect(this.dryGain);
+        this.masterDrive.connect(this.delay);
+        this.delay.connect(this.delayFeedback);
+        this.delayFeedback.connect(this.delay);
+        this.delay.connect(this.echoMix);
+        
+        // Connect to destination
+        this.dryGain.connect(this.audioContext.destination);
+        this.echoMix.connect(this.audioContext.destination);
+        
+        // Start modulator
+        this.modulator.start();
+        
+        // Initialize visualization data arrays
+        this.oscilloscopeBufferLength = this.oscilloscopeAnalyser.frequencyBinCount;
+        this.oscilloscopeDataArray = new Uint8Array(this.oscilloscopeBufferLength);
+        this.equalizerBufferLength = this.equalizerAnalyser.frequencyBinCount;
+        this.equalizerDataArray = new Uint8Array(this.equalizerBufferLength);
+    }
+
+    updateEQ(band, value) {
+        const node = this.eqNodes[band];
+        if (node) {
+            // Convert the slider value (-12 to 12) to decibels
+            const dbValue = value;
+            node.gain.value = dbValue;
+            
+            // Force a redraw of the visualization
+            requestAnimationFrame(() => this.drawVisualizations());
+        }
     }
 }
 

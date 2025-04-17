@@ -402,4 +402,51 @@ input[type="range"]::-webkit-slider-thumb {
     100% {
         opacity: 0.6;
     }
+}
+
+.eq-controls {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    height: calc(100% - 50px);
+    pointer-events: all;
+}
+
+.eq-band {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+}
+
+.eq-band input[type="range"] {
+    writing-mode: bt-lr;
+    -webkit-appearance: slider-vertical;
+    width: 20px;
+    height: 100px;
+    background: rgba(76, 175, 80, 0.2);
+    margin: 0 0 10px 0;
+    padding: 0;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    border-radius: 3px;
+}
+
+.eq-band input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 10px;
+    background: rgba(76, 175, 80, 0.8);
+    border-radius: 2px;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
+}
+
+.eq-band span {
+    color: rgba(76, 175, 80, 0.8);
+    font-size: 0.8rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 } 
