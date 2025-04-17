@@ -578,19 +578,19 @@ class JungleGenerator {
         const clap = this.audioContext.createGain();
         clap.gain.value = 0;
         
-        // Create noise buffer
-        const noiseBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.1, this.audioContext.sampleRate);
+        // Create noise buffer with proper length
+        const bufferLength = this.audioContext.sampleRate * 0.1; // 100ms of noise
+        const noiseBuffer = this.audioContext.createBuffer(1, bufferLength, this.audioContext.sampleRate);
         const noiseData = noiseBuffer.getChannelData(0);
         
-        for (let i = 0; i < noiseBuffer.length; i++) {
+        // Fill buffer with noise
+        for (let i = 0; i < bufferLength; i++) {
             noiseData[i] = Math.random() * 2 - 1;
         }
         
-        // Create multiple noise sources for layered clap
-        const noise1 = this.audioContext.createBufferSource();
-        const noise2 = this.audioContext.createBufferSource();
-        noise1.buffer = noiseBuffer;
-        noise2.buffer = noiseBuffer;
+        // Create envelope for the clap
+        const envelope = this.audioContext.createGain();
+        envelope.gain.value = 0;
         
         // Create filters for different clap layers
         const filter1 = this.audioContext.createBiquadFilter();
@@ -603,14 +603,14 @@ class JungleGenerator {
         filter2.Q.value = 1;
         
         // Connect nodes
-        noise1.connect(filter1);
-        noise2.connect(filter2);
+        envelope.connect(filter1);
+        envelope.connect(filter2);
         filter1.connect(clap);
         filter2.connect(clap);
         
-        // Start noise sources
-        noise1.start();
-        noise2.start();
+        // Store envelope for later use
+        clap.envelope = envelope;
+        clap.noiseBuffer = noiseBuffer;
         
         return clap;
     }
@@ -878,6 +878,27 @@ class JungleGenerator {
                 gain.pitchEnv.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
                 break;
             case 'clap':
+                // Create new noise sources for each clap
+                const noise1 = this.audioContext.createBufferSource();
+                const noise2 = this.audioContext.createBufferSource();
+                noise1.buffer = gain.noiseBuffer;
+                noise2.buffer = gain.noiseBuffer;
+                
+                // Connect noise sources to envelope
+                noise1.connect(gain.envelope);
+                noise2.connect(gain.envelope);
+                
+                // Set up envelope
+                gain.envelope.gain.cancelScheduledValues(now);
+                gain.envelope.gain.setValueAtTime(0, now);
+                gain.envelope.gain.linearRampToValueAtTime(1, now + 0.001);
+                gain.envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                
+                // Start noise sources
+                noise1.start(now);
+                noise2.start(now);
+                
+                // Set gain
                 gain.gain.linearRampToValueAtTime(1, now + 0.001);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
                 break;
