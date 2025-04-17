@@ -1,10 +1,17 @@
 class JungleGenerator {
     constructor() {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 2048;
-        this.bufferLength = this.analyser.frequencyBinCount;
-        this.dataArray = new Uint8Array(this.bufferLength);
+        
+        // Create analyzers
+        this.oscilloscopeAnalyser = this.audioContext.createAnalyser();
+        this.oscilloscopeAnalyser.fftSize = 2048;
+        this.oscilloscopeBufferLength = this.oscilloscopeAnalyser.frequencyBinCount;
+        this.oscilloscopeDataArray = new Uint8Array(this.oscilloscopeBufferLength);
+
+        this.equalizerAnalyser = this.audioContext.createAnalyser();
+        this.equalizerAnalyser.fftSize = 2048;
+        this.equalizerBufferLength = this.equalizerAnalyser.frequencyBinCount;
+        this.equalizerDataArray = new Uint8Array(this.equalizerBufferLength);
         
         // Create master effects chain
         this.masterFilter = this.audioContext.createBiquadFilter();
@@ -50,10 +57,14 @@ class JungleGenerator {
         
         // Mix dry and wet signals
         this.masterDrive.connect(this.dryGain);
-        this.dryGain.connect(this.analyser);
-        this.echoMix.connect(this.analyser);
+        this.dryGain.connect(this.oscilloscopeAnalyser);
+        this.dryGain.connect(this.equalizerAnalyser);
         
-        this.analyser.connect(this.audioContext.destination);
+        this.echoMix.connect(this.oscilloscopeAnalyser);
+        this.echoMix.connect(this.equalizerAnalyser);
+        
+        this.oscilloscopeAnalyser.connect(this.audioContext.destination);
+        this.equalizerAnalyser.connect(this.audioContext.destination);
         this.modulatorGain.connect(this.masterFilter.frequency);
         
         // Initialize keyboard control
@@ -75,7 +86,7 @@ class JungleGenerator {
         };
         
         this.initUI();
-        this.initOscilloscope();
+        this.initVisualizations();
         this.setupAudioNodes();
         this.startOscilloscope();
     }
@@ -145,39 +156,102 @@ class JungleGenerator {
         document.getElementById('reset-effects').addEventListener('click', () => this.resetEffects());
     }
     
-    initOscilloscope() {
-        this.canvas = document.getElementById('oscilloscope');
-        this.canvasCtx = this.canvas.getContext('2d');
+    initVisualizations() {
+        // Set up oscilloscope
+        this.oscilloscopeCanvas = document.getElementById('oscilloscope');
+        this.oscilloscopeCtx = this.oscilloscopeCanvas.getContext('2d');
         
-        // Set initial canvas size
-        this.resizeCanvas();
+        // Set up equalizer
+        this.equalizerCanvas = document.getElementById('equalizer');
+        this.equalizerCtx = this.equalizerCanvas.getContext('2d');
+        
+        // Set initial canvas sizes
+        this.resizeCanvases();
         
         // Handle window resize
-        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('resize', () => this.resizeCanvases());
     }
-    
-    resizeCanvas() {
-        const container = this.canvas.parentElement;
+
+    resizeCanvases() {
         const dpr = window.devicePixelRatio || 1;
         
-        // Set display size
-        this.canvas.style.width = container.offsetWidth + 'px';
-        this.canvas.style.height = container.offsetHeight + 'px';
+        // Resize oscilloscope
+        const oscContainer = this.oscilloscopeCanvas.parentElement;
+        this.oscilloscopeCanvas.style.width = oscContainer.offsetWidth + 'px';
+        this.oscilloscopeCanvas.style.height = oscContainer.offsetHeight + 'px';
+        this.oscilloscopeCanvas.width = oscContainer.offsetWidth * dpr;
+        this.oscilloscopeCanvas.height = oscContainer.offsetHeight * dpr;
+        this.oscilloscopeCtx.scale(dpr, dpr);
         
-        // Set actual size in memory
-        this.canvas.width = container.offsetWidth * dpr;
-        this.canvas.height = container.offsetHeight * dpr;
-        
-        // Scale context to ensure correct drawing operations
-        this.canvasCtx.scale(dpr, dpr);
+        // Resize equalizer
+        const eqContainer = this.equalizerCanvas.parentElement;
+        this.equalizerCanvas.style.width = eqContainer.offsetWidth + 'px';
+        this.equalizerCanvas.style.height = eqContainer.offsetHeight + 'px';
+        this.equalizerCanvas.width = eqContainer.offsetWidth * dpr;
+        this.equalizerCanvas.height = eqContainer.offsetHeight * dpr;
+        this.equalizerCtx.scale(dpr, dpr);
     }
-    
-    startOscilloscope() {
-        const draw = () => {
-            this.drawOscilloscope();
-            requestAnimationFrame(draw);
-        };
-        requestAnimationFrame(draw);
+
+    drawVisualizations() {
+        // Draw oscilloscope
+        this.oscilloscopeAnalyser.getByteTimeDomainData(this.oscilloscopeDataArray);
+        
+        this.oscilloscopeCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        this.oscilloscopeCtx.fillRect(0, 0, this.oscilloscopeCanvas.width / window.devicePixelRatio, 
+            this.oscilloscopeCanvas.height / window.devicePixelRatio);
+        
+        this.oscilloscopeCtx.lineWidth = 2;
+        this.oscilloscopeCtx.strokeStyle = 'rgb(76, 175, 80)';
+        this.oscilloscopeCtx.beginPath();
+        
+        const oscWidth = this.oscilloscopeCanvas.width / window.devicePixelRatio;
+        const oscHeight = this.oscilloscopeCanvas.height / window.devicePixelRatio;
+        const oscSliceWidth = oscWidth / this.oscilloscopeBufferLength;
+        let oscX = 0;
+        
+        for (let i = 0; i < this.oscilloscopeBufferLength; i++) {
+            const v = this.oscilloscopeDataArray[i] / 128.0;
+            const y = v * oscHeight / 2;
+            
+            if (i === 0) {
+                this.oscilloscopeCtx.moveTo(oscX, y);
+            } else {
+                this.oscilloscopeCtx.lineTo(oscX, y);
+            }
+            
+            oscX += oscSliceWidth;
+        }
+        
+        this.oscilloscopeCtx.lineTo(oscWidth, oscHeight / 2);
+        this.oscilloscopeCtx.stroke();
+        
+        // Draw equalizer
+        this.equalizerAnalyser.getByteFrequencyData(this.equalizerDataArray);
+        
+        this.equalizerCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        this.equalizerCtx.fillRect(0, 0, this.equalizerCanvas.width / window.devicePixelRatio, 
+            this.equalizerCanvas.height / window.devicePixelRatio);
+        
+        const eqWidth = this.equalizerCanvas.width / window.devicePixelRatio;
+        const eqHeight = this.equalizerCanvas.height / window.devicePixelRatio - 20; // Account for labels
+        const barWidth = eqWidth / this.equalizerBufferLength;
+        const barGap = 1;
+        
+        for (let i = 0; i < this.equalizerBufferLength; i++) {
+            const barHeight = (this.equalizerDataArray[i] / 255.0) * eqHeight;
+            
+            const hue = (i / this.equalizerBufferLength) * 120; // Green gradient
+            this.equalizerCtx.fillStyle = `hsla(${hue}, 70%, 50%, 0.8)`;
+            
+            this.equalizerCtx.fillRect(
+                i * barWidth + barGap,
+                eqHeight - barHeight,
+                barWidth - barGap,
+                barHeight
+            );
+        }
+        
+        requestAnimationFrame(() => this.drawVisualizations());
     }
     
     setupAudioNodes() {
@@ -459,6 +533,7 @@ class JungleGenerator {
         this.isPlaying = true;
         this.currentStep = 0;
         this.scheduleNextStep();
+        this.drawVisualizations();
     }
     
     stop() {
@@ -539,47 +614,47 @@ class JungleGenerator {
     
     drawOscilloscope() {
         // Get the time domain data
-        this.analyser.getByteTimeDomainData(this.dataArray);
+        this.oscilloscopeAnalyser.getByteTimeDomainData(this.oscilloscopeDataArray);
         
         // Clear the canvas with a semi-transparent black to create a fade effect
-        this.canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        this.canvasCtx.fillRect(0, 0, this.canvas.width / window.devicePixelRatio, this.canvas.height / window.devicePixelRatio);
+        this.oscilloscopeCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        this.oscilloscopeCtx.fillRect(0, 0, this.oscilloscopeCanvas.width / window.devicePixelRatio, this.oscilloscopeCanvas.height / window.devicePixelRatio);
         
         // Style for the waveform
-        this.canvasCtx.lineWidth = 2;
-        this.canvasCtx.strokeStyle = 'rgb(76, 175, 80)';
-        this.canvasCtx.beginPath();
+        this.oscilloscopeCtx.lineWidth = 2;
+        this.oscilloscopeCtx.strokeStyle = 'rgb(76, 175, 80)';
+        this.oscilloscopeCtx.beginPath();
         
-        const width = this.canvas.width / window.devicePixelRatio;
-        const height = this.canvas.height / window.devicePixelRatio;
-        const bufferLength = this.analyser.frequencyBinCount;
+        const width = this.oscilloscopeCanvas.width / window.devicePixelRatio;
+        const height = this.oscilloscopeCanvas.height / window.devicePixelRatio;
+        const bufferLength = this.oscilloscopeBufferLength;
         const sliceWidth = width / bufferLength;
         let x = 0;
         
         for (let i = 0; i < bufferLength; i++) {
-            const v = this.dataArray[i] / 128.0;
+            const v = this.oscilloscopeDataArray[i] / 128.0;
             const y = v * height / 2;
             
             if (i === 0) {
-                this.canvasCtx.moveTo(x, y);
+                this.oscilloscopeCtx.moveTo(x, y);
             } else {
-                this.canvasCtx.lineTo(x, y);
+                this.oscilloscopeCtx.lineTo(x, y);
             }
             
             x += sliceWidth;
         }
         
         // Draw center line
-        this.canvasCtx.lineTo(width, height / 2);
-        this.canvasCtx.stroke();
+        this.oscilloscopeCtx.lineTo(width, height / 2);
+        this.oscilloscopeCtx.stroke();
         
         // Draw a dim center line for reference
-        this.canvasCtx.beginPath();
-        this.canvasCtx.lineWidth = 1;
-        this.canvasCtx.strokeStyle = 'rgba(76, 175, 80, 0.3)';
-        this.canvasCtx.moveTo(0, height / 2);
-        this.canvasCtx.lineTo(width, height / 2);
-        this.canvasCtx.stroke();
+        this.oscilloscopeCtx.beginPath();
+        this.oscilloscopeCtx.lineWidth = 1;
+        this.oscilloscopeCtx.strokeStyle = 'rgba(76, 175, 80, 0.3)';
+        this.oscilloscopeCtx.moveTo(0, height / 2);
+        this.oscilloscopeCtx.lineTo(width, height / 2);
+        this.oscilloscopeCtx.stroke();
     }
     
     clearAll() {
