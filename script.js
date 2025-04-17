@@ -839,6 +839,32 @@ class JungleGenerator {
         gain.gain.cancelScheduledValues(now);
         gain.gain.setValueAtTime(0, now);
         
+        // Trigger animation with interaction effects
+        const fightersContainer = document.querySelector('.fighters-container');
+        const leftFighter = document.querySelector('.fighter-left');
+        const rightFighter = document.querySelector('.fighter-right');
+        
+        // Add the sound trigger class
+        fightersContainer.classList.add(`${instrument}-sound`);
+        
+        // Add interaction effects based on the instrument
+        if (['kick', 'subkick', 'bass', 'reese'].includes(instrument)) {
+            // For strong attacks, make the other fighter react
+            if (instrument === 'kick' || instrument === 'subkick') {
+                rightFighter.classList.add('fighter-hit');
+                setTimeout(() => rightFighter.classList.remove('fighter-hit'), 300);
+            }
+        } else if (['snare', 'clap'].includes(instrument)) {
+            // For punch moves, create a battle effect
+            fightersContainer.style.animation = 'lcd-battle 0.3s steps(1, end)';
+            setTimeout(() => fightersContainer.style.animation = '', 300);
+        }
+        
+        // Remove the sound trigger class
+        setTimeout(() => {
+            fightersContainer.classList.remove(`${instrument}-sound`);
+        }, 500);
+        
         switch(instrument) {
             // Pattern Maker 1 instruments
             case 'kick':

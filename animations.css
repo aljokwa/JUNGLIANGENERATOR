@@ -1,0 +1,137 @@
+.fighters-container {
+    position: fixed;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 120px;
+    pointer-events: none;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+    font-family: monospace;
+    filter: contrast(1.2);
+}
+
+.fighter {
+    width: 60px;
+    height: 60px;
+    position: relative;
+    background: #000;
+    color: #333;
+    font-size: 24px;
+    line-height: 1;
+    text-align: center;
+}
+
+.fighter::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+}
+
+/* LCD Character States */
+.fighter-standing::before {
+    content: 'o';
+    display: block;
+    transform: rotate(90deg);
+}
+
+.fighter-kick::before {
+    content: '┗';
+}
+
+.fighter-punch::before {
+    content: '─';
+}
+
+.fighter-block::before {
+    content: '|';
+}
+
+.fighter-hit::before {
+    content: '*';
+}
+
+/* LCD-style animations */
+@keyframes lcd-kick {
+    0% { content: 'o'; }
+    25% { content: '┗'; }
+    50% { content: '┗'; }
+    100% { content: 'o'; }
+}
+
+@keyframes lcd-punch {
+    0% { content: 'o'; }
+    25% { content: '─'; }
+    50% { content: '─'; }
+    100% { content: 'o'; }
+}
+
+@keyframes lcd-block {
+    0% { content: 'o'; }
+    25% { content: '|'; }
+    75% { content: '|'; }
+    100% { content: 'o'; }
+}
+
+@keyframes lcd-hit {
+    0% { content: 'o'; }
+    25% { content: '*'; }
+    50% { content: '×'; }
+    75% { content: '*'; }
+    100% { content: 'o'; }
+}
+
+@keyframes lcd-idle {
+    0%, 100% { content: 'o'; }
+    50% { content: 'O'; }
+}
+
+/* Battle interaction animations */
+@keyframes lcd-battle {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+    100% { transform: translateX(0); }
+}
+
+/* Apply LCD animations based on sound triggers */
+.kick-sound .fighter-left::before { animation: lcd-kick 0.3s steps(1, end); }
+.snare-sound .fighter-right::before { animation: lcd-punch 0.3s steps(1, end); }
+.hihat-sound .fighter-left::before { animation: lcd-block 0.2s steps(1, end); }
+.bass-sound .fighter-right::before { animation: lcd-kick 0.3s steps(1, end); }
+.overdrive-sound .fighter-left::before { animation: lcd-hit 0.4s steps(1, end); }
+.vocal-sound .fighter-right::before { animation: lcd-hit 0.4s steps(1, end); }
+
+/* Pattern 2 animations */
+.subkick-sound .fighter-left::before { animation: lcd-kick 0.4s steps(1, end); }
+.clap-sound .fighter-right::before { animation: lcd-punch 0.3s steps(1, end); }
+.ride-sound .fighter-left::before { animation: lcd-block 0.2s steps(1, end); }
+.reese-sound .fighter-right::before { animation: lcd-kick 0.3s steps(1, end); }
+.wobble-sound .fighter-left::before { animation: lcd-hit 0.4s steps(1, end); }
+.vox-sound .fighter-right::before { animation: lcd-hit 0.4s steps(1, end); }
+
+/* Default idle state */
+.fighter::before {
+    animation: lcd-idle 2s steps(1, end) infinite;
+}
+
+/* LCD screen effect */
+.fighters-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        rgba(255,255,255,0.1) 1px,
+        transparent 1px
+    );
+    background-size: 100% 2px;
+    pointer-events: none;
+    opacity: 0.1;
+} 
