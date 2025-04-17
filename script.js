@@ -77,12 +77,20 @@ class JungleGenerator {
         this.stepsPerPattern = 16;
         
         this.patterns = {
+            // Pattern Maker 1
             kick: new Array(this.stepsPerPattern).fill(false),
             snare: new Array(this.stepsPerPattern).fill(false),
             hihat: new Array(this.stepsPerPattern).fill(false),
             bass: new Array(this.stepsPerPattern).fill(false),
             overdrive: new Array(this.stepsPerPattern).fill(false),
-            vocal: new Array(this.stepsPerPattern).fill(false)
+            vocal: new Array(this.stepsPerPattern).fill(false),
+            // Pattern Maker 2
+            subkick: new Array(this.stepsPerPattern).fill(false),
+            clap: new Array(this.stepsPerPattern).fill(false),
+            ride: new Array(this.stepsPerPattern).fill(false),
+            reese: new Array(this.stepsPerPattern).fill(false),
+            wobble: new Array(this.stepsPerPattern).fill(false),
+            vox: new Array(this.stepsPerPattern).fill(false)
         };
         
         // Create EQ nodes with more precise frequency bands
@@ -273,12 +281,20 @@ class JungleGenerator {
     setupAudioNodes() {
         // Create audio nodes for each instrument
         this.instruments = {
+            // Pattern Maker 1
             kick: this.createKick(),
             snare: this.createSnare(),
             hihat: this.createHiHat(),
             bass: this.createBass(),
             overdrive: this.createOverdrive(),
-            vocal: this.createVocal()
+            vocal: this.createVocal(),
+            // Pattern Maker 2
+            subkick: this.createSubKick(),
+            clap: this.createClap(),
+            ride: this.createRide(),
+            reese: this.createReese(),
+            wobble: this.createWobble(),
+            vox: this.createVox()
         };
         
         // Connect all instruments to the analyser through master gain
@@ -524,6 +540,245 @@ class JungleGenerator {
         return vocal;
     }
     
+    createSubKick() {
+        const subkick = this.audioContext.createGain();
+        subkick.gain.value = 0;
+        
+        // Create a very low sine wave
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 30; // Very low frequency for sub-bass
+        
+        // Add a slight pitch envelope
+        const pitchEnv = this.audioContext.createGain();
+        pitchEnv.gain.value = 0;
+        
+        // Create a lowpass filter for the sub
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 100;
+        filter.Q.value = 0.5;
+        
+        // Connect nodes
+        osc.connect(pitchEnv);
+        pitchEnv.connect(filter);
+        filter.connect(subkick);
+        
+        // Start oscillator
+        osc.start();
+        
+        // Store oscillator for later use
+        subkick.osc = osc;
+        subkick.pitchEnv = pitchEnv;
+        
+        return subkick;
+    }
+    
+    createClap() {
+        const clap = this.audioContext.createGain();
+        clap.gain.value = 0;
+        
+        // Create noise buffer
+        const noiseBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.1, this.audioContext.sampleRate);
+        const noiseData = noiseBuffer.getChannelData(0);
+        
+        for (let i = 0; i < noiseBuffer.length; i++) {
+            noiseData[i] = Math.random() * 2 - 1;
+        }
+        
+        // Create multiple noise sources for layered clap
+        const noise1 = this.audioContext.createBufferSource();
+        const noise2 = this.audioContext.createBufferSource();
+        noise1.buffer = noiseBuffer;
+        noise2.buffer = noiseBuffer;
+        
+        // Create filters for different clap layers
+        const filter1 = this.audioContext.createBiquadFilter();
+        const filter2 = this.audioContext.createBiquadFilter();
+        filter1.type = 'bandpass';
+        filter1.frequency.value = 2000;
+        filter1.Q.value = 1;
+        filter2.type = 'bandpass';
+        filter2.frequency.value = 4000;
+        filter2.Q.value = 1;
+        
+        // Connect nodes
+        noise1.connect(filter1);
+        noise2.connect(filter2);
+        filter1.connect(clap);
+        filter2.connect(clap);
+        
+        // Start noise sources
+        noise1.start();
+        noise2.start();
+        
+        return clap;
+    }
+    
+    createRide() {
+        const ride = this.audioContext.createGain();
+        ride.gain.value = 0;
+        
+        // Create noise buffer
+        const noiseBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.1, this.audioContext.sampleRate);
+        const noiseData = noiseBuffer.getChannelData(0);
+        
+        for (let i = 0; i < noiseBuffer.length; i++) {
+            noiseData[i] = Math.random() * 2 - 1;
+        }
+        
+        // Create noise source
+        const noise = this.audioContext.createBufferSource();
+        noise.buffer = noiseBuffer;
+        noise.loop = true;
+        
+        // Create high-pass filter for metallic sound
+        const highPass = this.audioContext.createBiquadFilter();
+        highPass.type = 'highpass';
+        highPass.frequency.value = 8000;
+        highPass.Q.value = 0.5;
+        
+        // Create resonance filter
+        const resonance = this.audioContext.createBiquadFilter();
+        resonance.type = 'bandpass';
+        resonance.frequency.value = 12000;
+        resonance.Q.value = 2;
+        
+        // Connect nodes
+        noise.connect(highPass);
+        highPass.connect(resonance);
+        resonance.connect(ride);
+        
+        // Start noise
+        noise.start();
+        
+        return ride;
+    }
+    
+    createReese() {
+        const reese = this.audioContext.createGain();
+        reese.gain.value = 0;
+        
+        // Create two detuned sawtooth oscillators
+        const osc1 = this.audioContext.createOscillator();
+        const osc2 = this.audioContext.createOscillator();
+        osc1.type = 'sawtooth';
+        osc2.type = 'sawtooth';
+        osc1.frequency.value = 55; // A1
+        osc2.frequency.value = 55.5; // Slightly detuned
+        
+        // Create LFO for movement
+        const lfo = this.audioContext.createOscillator();
+        lfo.frequency.value = 0.1;
+        const lfoGain = this.audioContext.createGain();
+        lfoGain.gain.value = 0.5;
+        
+        // Create filter
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 200;
+        filter.Q.value = 1;
+        
+        // Connect nodes
+        osc1.connect(filter);
+        osc2.connect(filter);
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+        filter.connect(reese);
+        
+        // Start oscillators
+        osc1.start();
+        osc2.start();
+        lfo.start();
+        
+        // Store oscillators for later use
+        reese.osc1 = osc1;
+        reese.osc2 = osc2;
+        reese.lfo = lfo;
+        
+        return reese;
+    }
+    
+    createWobble() {
+        const wobble = this.audioContext.createGain();
+        wobble.gain.value = 0;
+        
+        // Create sawtooth oscillator
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 110; // A2
+        
+        // Create LFO for wobble effect
+        const lfo = this.audioContext.createOscillator();
+        lfo.frequency.value = 0.5;
+        const lfoGain = this.audioContext.createGain();
+        lfoGain.gain.value = 100;
+        
+        // Create filter
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 200;
+        filter.Q.value = 1;
+        
+        // Connect nodes
+        osc.connect(filter);
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+        filter.connect(wobble);
+        
+        // Start oscillators
+        osc.start();
+        lfo.start();
+        
+        // Store oscillators for later use
+        wobble.osc = osc;
+        wobble.lfo = lfo;
+        
+        return wobble;
+    }
+    
+    createVox() {
+        const vox = this.audioContext.createGain();
+        vox.gain.value = 0.8;
+        
+        // Create oscillator for the vocal sound
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 440; // A4 note
+        
+        // Create filter for vocal characteristics
+        const filter = this.audioContext.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 2000;
+        filter.Q.value = 2;
+        
+        // Create vibrato effect
+        const vibrato = this.audioContext.createOscillator();
+        vibrato.type = 'sine';
+        vibrato.frequency.value = 7; // 7 Hz vibrato
+        
+        const vibratoGain = this.audioContext.createGain();
+        vibratoGain.gain.value = 10; // 10 Hz depth
+        
+        // Add effects
+        const distortion = this.audioContext.createWaveShaper();
+        distortion.curve = this.makeDistortionCurve(100);
+        distortion.oversample = '4x';
+        
+        // Connect nodes
+        vibrato.connect(vibratoGain);
+        vibratoGain.connect(osc.frequency);
+        osc.connect(filter);
+        filter.connect(distortion);
+        distortion.connect(vox);
+        
+        // Store oscillators for later use
+        vox.osc = osc;
+        vox.vibrato = vibrato;
+        
+        return vox;
+    }
+    
     makeDistortionCurve(amount) {
         const k = typeof amount === 'number' ? amount : 50;
         const n_samples = 44100;
@@ -585,6 +840,7 @@ class JungleGenerator {
         gain.gain.setValueAtTime(0, now);
         
         switch(instrument) {
+            // Pattern Maker 1 instruments
             case 'kick':
                 gain.gain.linearRampToValueAtTime(1, now + 0.001);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
@@ -606,7 +862,6 @@ class JungleGenerator {
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
                 break;
             case 'vocal':
-                // Start oscillators only when playing a note
                 if (!gain.osc.started) {
                     gain.osc.start();
                     gain.vibrato.start();
@@ -614,6 +869,38 @@ class JungleGenerator {
                 }
                 gain.gain.linearRampToValueAtTime(0.8, now + 0.001);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+                break;
+            // Pattern Maker 2 instruments
+            case 'subkick':
+                gain.gain.linearRampToValueAtTime(1, now + 0.001);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+                gain.pitchEnv.gain.setValueAtTime(1, now);
+                gain.pitchEnv.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                break;
+            case 'clap':
+                gain.gain.linearRampToValueAtTime(1, now + 0.001);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                break;
+            case 'ride':
+                gain.gain.linearRampToValueAtTime(1, now + 0.001);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                break;
+            case 'reese':
+                gain.gain.linearRampToValueAtTime(1, now + 0.001);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                break;
+            case 'wobble':
+                gain.gain.linearRampToValueAtTime(1, now + 0.001);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                break;
+            case 'vox':
+                if (!gain.osc.started) {
+                    gain.osc.start();
+                    gain.vibrato.start();
+                    gain.osc.started = true;
+                }
+                gain.gain.linearRampToValueAtTime(0.8, now + 0.001);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
                 break;
         }
     }
@@ -685,12 +972,21 @@ class JungleGenerator {
     randomizePattern() {
         // Different probabilities for different instruments
         const probabilities = {
+            // Pattern Maker 1
             kick: 0.3,      // 30% chance for kick
             snare: 0.2,     // 20% chance for snare
             hihat: 0.4,     // 40% chance for hi-hat
             bass: 0.25,     // 25% chance for bass
             overdrive: 0.2,  // 20% chance for overdrive
-            vocal: 0.15      // 15% chance for vocal
+            vocal: 0.15,    // 15% chance for vocal
+            
+            // Pattern Maker 2
+            subkick: 0.15,  // 15% chance for sub kick (rare but impactful)
+            clap: 0.2,      // 20% chance for clap
+            ride: 0.3,      // 30% chance for ride
+            reese: 0.25,    // 25% chance for reese bass
+            wobble: 0.2,    // 20% chance for wobble
+            vox: 0.15       // 15% chance for vox
         };
         
         // Randomize each pattern
