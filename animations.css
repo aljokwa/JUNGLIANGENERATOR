@@ -14,7 +14,7 @@
 }
 
 .fighter {
-    width: 60px;
+    width: 120px;
     height: 60px;
     position: relative;
     background: #000;
@@ -22,6 +22,7 @@
     font-size: 24px;
     line-height: 1;
     text-align: center;
+    transition: transform 0.1s steps(2, end);
 }
 
 .fighter::before {
@@ -30,96 +31,198 @@
     width: 100%;
     height: 100%;
     background-color: #000;
+    transition: all 0.1s steps(2, end);
 }
 
-/* LCD Character States */
+/* Enhanced Street Fighter LCD States */
 .fighter-standing::before {
-    content: 'o';
-    display: block;
-    transform: rotate(90deg);
+    content: '[o_o]';
 }
 
 .fighter-kick::before {
-    content: '┗';
+    content: '[o>o]━╾';
 }
 
 .fighter-punch::before {
-    content: '─';
+    content: '[o_o]═→';
 }
 
 .fighter-block::before {
-    content: '|';
+    content: '[|_|]';
 }
 
 .fighter-hit::before {
-    content: '*';
+    content: '※[x_x]';
 }
 
-/* LCD-style animations */
+.fighter-special::before {
+    content: '\\o/';
+}
+
+/* New special move states */
+.fighter-uppercut::before {
+    content: '[o^o]↑';
+}
+
+.fighter-hadoken::before {
+    content: '[○_○]═○';
+}
+
+.fighter-shoryuken::before {
+    content: '[△_△]↗';
+}
+
+.fighter-spin::before {
+    content: '[@_@]○';
+}
+
+/* Enhanced Street Fighter style animations */
 @keyframes lcd-kick {
-    0% { content: 'o'; }
-    25% { content: '┗'; }
-    50% { content: '┗'; }
-    100% { content: 'o'; }
+    0% { content: '[o_o]'; }
+    20% { content: '[o>o]'; }
+    40% { content: '[o>o]━╾'; transform: translateX(10px); }
+    60% { content: '[o>o]━╾★'; transform: translateX(15px); }
+    80% { content: '[o>o]'; transform: translateX(5px); }
+    100% { content: '[o_o]'; transform: translateX(0); }
 }
 
 @keyframes lcd-punch {
-    0% { content: 'o'; }
-    25% { content: '─'; }
-    50% { content: '─'; }
-    100% { content: 'o'; }
+    0% { content: '[o_o]'; }
+    20% { content: '[o_o]→'; }
+    40% { content: '[o_o]═→'; transform: translateX(10px); }
+    60% { content: '[o_o]═→✦'; transform: translateX(15px); }
+    80% { content: '[o_o]→'; transform: translateX(5px); }
+    100% { content: '[o_o]'; transform: translateX(0); }
 }
 
 @keyframes lcd-block {
-    0% { content: 'o'; }
-    25% { content: '|'; }
-    75% { content: '|'; }
-    100% { content: 'o'; }
+    0% { content: '[o_o]'; }
+    25% { content: '[|_|]'; }
+    50% { content: '┃[|_|]┃'; }
+    75% { content: '[|_|]'; }
+    100% { content: '[o_o]'; }
 }
 
 @keyframes lcd-hit {
-    0% { content: 'o'; }
-    25% { content: '*'; }
-    50% { content: '×'; }
-    75% { content: '*'; }
-    100% { content: 'o'; }
+    0% { content: '[o_o]'; }
+    25% { content: '※[x_x]'; transform: translateX(-10px) rotate(-5deg); }
+    50% { content: '※[>_<]'; transform: translateX(-15px) rotate(5deg); }
+    75% { content: '*[x_x]'; transform: translateX(-5px) rotate(-5deg); }
+    100% { content: '[o_o]'; transform: translateX(0) rotate(0); }
 }
 
-@keyframes lcd-idle {
-    0%, 100% { content: 'o'; }
-    50% { content: 'O'; }
+/* New special move animations */
+@keyframes lcd-hadoken {
+    0% { content: '[o_o]'; }
+    20% { content: '[○_○]'; }
+    40% { content: '[○_○]═'; }
+    60% { content: '[○_○]═○'; }
+    80% { content: '[○_○]═○☆'; }
+    100% { content: '[o_o]'; }
 }
 
-/* Battle interaction animations */
+@keyframes lcd-shoryuken {
+    0% { content: '[o_o]'; transform: translateY(0); }
+    20% { content: '[△_△]'; transform: translateY(-5px); }
+    40% { content: '[△_△]↗'; transform: translateY(-10px); }
+    60% { content: '[△_△]↗★'; transform: translateY(-15px); }
+    80% { content: '[△_△]'; transform: translateY(-5px); }
+    100% { content: '[o_o]'; transform: translateY(0); }
+}
+
+@keyframes lcd-spin {
+    0% { content: '[o_o]'; transform: rotate(0); }
+    25% { content: '[@_@]'; transform: rotate(90deg); }
+    50% { content: '[@_@]○'; transform: rotate(180deg); }
+    75% { content: '[@_@]○✦'; transform: rotate(270deg); }
+    100% { content: '[o_o]'; transform: rotate(360deg); }
+}
+
+/* Enhanced battle effects */
 @keyframes lcd-battle {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
-    100% { transform: translateX(0); }
+    0% { transform: translateX(0); filter: brightness(1) contrast(1.2); }
+    25% { transform: translateX(-5px); filter: brightness(1.3) contrast(1.3); }
+    50% { transform: translateX(5px); filter: brightness(1.5) contrast(1.4); }
+    75% { transform: translateX(-5px); filter: brightness(1.3) contrast(1.3); }
+    100% { transform: translateX(0); filter: brightness(1) contrast(1.2); }
 }
 
-/* Apply LCD animations based on sound triggers */
-.kick-sound .fighter-left::before { animation: lcd-kick 0.3s steps(1, end); }
-.snare-sound .fighter-right::before { animation: lcd-punch 0.3s steps(1, end); }
-.hihat-sound .fighter-left::before { animation: lcd-block 0.2s steps(1, end); }
-.bass-sound .fighter-right::before { animation: lcd-kick 0.3s steps(1, end); }
-.overdrive-sound .fighter-left::before { animation: lcd-hit 0.4s steps(1, end); }
-.vocal-sound .fighter-right::before { animation: lcd-hit 0.4s steps(1, end); }
+/* Victory flash animation */
+@keyframes victory-flash {
+    0% { filter: brightness(1); }
+    33% { filter: brightness(1.5) hue-rotate(120deg); }
+    66% { filter: brightness(1.8) hue-rotate(240deg); }
+    100% { filter: brightness(1); }
+}
 
-/* Pattern 2 animations */
-.subkick-sound .fighter-left::before { animation: lcd-kick 0.4s steps(1, end); }
-.clap-sound .fighter-right::before { animation: lcd-punch 0.3s steps(1, end); }
-.ride-sound .fighter-left::before { animation: lcd-block 0.2s steps(1, end); }
-.reese-sound .fighter-right::before { animation: lcd-kick 0.3s steps(1, end); }
-.wobble-sound .fighter-left::before { animation: lcd-hit 0.4s steps(1, end); }
-.vox-sound .fighter-right::before { animation: lcd-hit 0.4s steps(1, end); }
+/* Apply enhanced animations */
+.kick-sound .fighter-left::before { 
+    animation: lcd-kick 0.3s steps(5, end);
+    color: #f00;
+}
 
-/* Default idle state */
+.snare-sound .fighter-right::before { 
+    animation: lcd-punch 0.3s steps(5, end);
+    color: #0f0;
+}
+
+.hihat-sound .fighter-left::before { 
+    animation: lcd-block 0.2s steps(4, end);
+    color: #ff0;
+}
+
+.bass-sound .fighter-right::before { 
+    animation: lcd-hadoken 0.4s steps(5, end);
+    color: #0ff;
+}
+
+.overdrive-sound .fighter-left::before { 
+    animation: lcd-shoryuken 0.4s steps(5, end);
+    color: #f0f;
+}
+
+.vocal-sound .fighter-right::before { 
+    animation: lcd-spin 0.4s steps(4, end);
+    color: #fff;
+}
+
+/* Pattern 2 animations with enhanced effects */
+.subkick-sound .fighter-left::before { 
+    animation: lcd-shoryuken 0.4s steps(5, end);
+    color: #f00;
+}
+
+.clap-sound .fighter-right::before { 
+    animation: lcd-spin 0.3s steps(4, end);
+    color: #0f0;
+}
+
+.ride-sound .fighter-left::before { 
+    animation: lcd-block 0.2s steps(4, end);
+    color: #ff0;
+}
+
+.reese-sound .fighter-right::before { 
+    animation: lcd-hadoken 0.3s steps(5, end);
+    color: #0ff;
+}
+
+.wobble-sound .fighter-left::before { 
+    animation: lcd-hit 0.4s steps(4, end);
+    color: #f0f;
+}
+
+.vox-sound .fighter-right::before { 
+    animation: lcd-spin 0.4s steps(4, end);
+    color: #fff;
+}
+
+/* Enhanced idle animation */
 .fighter::before {
-    animation: lcd-idle 2s steps(1, end) infinite;
+    animation: lcd-idle 2s steps(4, end) infinite;
 }
 
-/* LCD screen effect */
+/* LCD screen effect with scan lines */
 .fighters-container::after {
     content: '';
     position: absolute;
@@ -127,11 +230,52 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(
-        rgba(255,255,255,0.1) 1px,
-        transparent 1px
-    );
-    background-size: 100% 2px;
+    background: 
+        linear-gradient(
+            rgba(255,255,255,0.1) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,0.05) 1px,
+            transparent 1px
+        );
+    background-size: 100% 2px, 2px 100%;
     pointer-events: none;
-    opacity: 0.1;
+    opacity: 0.15;
+}
+
+/* Combat effects */
+.fighter.attacking::before {
+    filter: brightness(1.5) saturate(1.5);
+}
+
+.fighter.hit::before {
+    animation: victory-flash 0.2s steps(3, end) 3;
+}
+
+.fighter.blocking::before {
+    filter: brightness(1.2) contrast(1.5);
+}
+
+.fighter.special::before {
+    filter: brightness(1.8) saturate(2) hue-rotate(45deg);
+}
+
+/* Energy bars with glow effect */
+.fighter::after {
+    content: '██████';
+    position: absolute;
+    top: -20px;
+    left: 0;
+    font-size: 12px;
+    color: #0f0;
+    text-shadow: 0 0 2px #0f0;
+    transition: all 0.3s steps(3, end);
+}
+
+.fighter.hit::after {
+    content: '███';
+    color: #f00;
+    text-shadow: 0 0 4px #f00;
 } 

@@ -287,7 +287,7 @@ class JungleGenerator {
             hihat: this.createHiHat(),
             bass: this.createBass(),
             overdrive: this.createOverdrive(),
-            vocal: this.createVocal(),
+            vocal: this.createVox(),
             // Pattern Maker 2
             subkick: this.createSubKick(),
             clap: this.createClap(),
@@ -467,77 +467,46 @@ class JungleGenerator {
         return overdrive;
     }
     
-    createVocal() {
-        const vocal = this.audioContext.createGain();
-        vocal.gain.value = 0.8; // Increased base volume
+    createVox() {
+        const vox = this.audioContext.createGain();
+        vox.gain.value = 0.8;
         
         // Create oscillator for the vocal sound
         const osc = this.audioContext.createOscillator();
         osc.type = 'sine';
-        osc.frequency.value = 220; // A3 note
+        osc.frequency.value = 440; // A4 note
         
         // Create filter for vocal characteristics
         const filter = this.audioContext.createBiquadFilter();
         filter.type = 'bandpass';
-        filter.frequency.value = 1000;
+        filter.frequency.value = 2000;
         filter.Q.value = 2;
         
         // Create vibrato effect
         const vibrato = this.audioContext.createOscillator();
         vibrato.type = 'sine';
-        vibrato.frequency.value = 5; // 5 Hz vibrato
+        vibrato.frequency.value = 7; // 7 Hz vibrato
         
         const vibratoGain = this.audioContext.createGain();
-        vibratoGain.gain.value = 5; // 5 Hz depth
+        vibratoGain.gain.value = 10; // 10 Hz depth
         
-        // Add 90's style effects
-        // Distortion
+        // Add effects
         const distortion = this.audioContext.createWaveShaper();
-        distortion.curve = this.makeDistortionCurve(200);
+        distortion.curve = this.makeDistortionCurve(100);
         distortion.oversample = '4x';
-        
-        // Reverb
-        const reverb = this.audioContext.createConvolver();
-        const reverbTime = 2.0;
-        const sampleRate = this.audioContext.sampleRate;
-        const length = sampleRate * reverbTime;
-        const impulse = this.audioContext.createBuffer(2, length, sampleRate);
-        const impulseL = impulse.getChannelData(0);
-        const impulseR = impulse.getChannelData(1);
-        
-        for (let i = 0; i < length; i++) {
-            const n = length - i;
-            impulseL[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
-            impulseR[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
-        }
-        reverb.buffer = impulse;
-        
-        // EQ
-        const lowShelf = this.audioContext.createBiquadFilter();
-        lowShelf.type = 'lowshelf';
-        lowShelf.frequency.value = 500;
-        lowShelf.gain.value = 3;
-        
-        const highShelf = this.audioContext.createBiquadFilter();
-        highShelf.type = 'highshelf';
-        highShelf.frequency.value = 3000;
-        highShelf.gain.value = 2;
         
         // Connect nodes
         vibrato.connect(vibratoGain);
         vibratoGain.connect(osc.frequency);
         osc.connect(filter);
         filter.connect(distortion);
-        distortion.connect(lowShelf);
-        lowShelf.connect(highShelf);
-        highShelf.connect(reverb);
-        reverb.connect(vocal);
+        distortion.connect(vox);
         
         // Store oscillators for later use
-        vocal.osc = osc;
-        vocal.vibrato = vibrato;
+        vox.osc = osc;
+        vox.vibrato = vibrato;
         
-        return vocal;
+        return vox;
     }
     
     createSubKick() {
@@ -737,48 +706,6 @@ class JungleGenerator {
         return wobble;
     }
     
-    createVox() {
-        const vox = this.audioContext.createGain();
-        vox.gain.value = 0.8;
-        
-        // Create oscillator for the vocal sound
-        const osc = this.audioContext.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.value = 440; // A4 note
-        
-        // Create filter for vocal characteristics
-        const filter = this.audioContext.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.value = 2000;
-        filter.Q.value = 2;
-        
-        // Create vibrato effect
-        const vibrato = this.audioContext.createOscillator();
-        vibrato.type = 'sine';
-        vibrato.frequency.value = 7; // 7 Hz vibrato
-        
-        const vibratoGain = this.audioContext.createGain();
-        vibratoGain.gain.value = 10; // 10 Hz depth
-        
-        // Add effects
-        const distortion = this.audioContext.createWaveShaper();
-        distortion.curve = this.makeDistortionCurve(100);
-        distortion.oversample = '4x';
-        
-        // Connect nodes
-        vibrato.connect(vibratoGain);
-        vibratoGain.connect(osc.frequency);
-        osc.connect(filter);
-        filter.connect(distortion);
-        distortion.connect(vox);
-        
-        // Store oscillators for later use
-        vox.osc = osc;
-        vox.vibrato = vibrato;
-        
-        return vox;
-    }
-    
     makeDistortionCurve(amount) {
         const k = typeof amount === 'number' ? amount : 50;
         const n_samples = 44100;
@@ -835,11 +762,16 @@ class JungleGenerator {
         const now = this.audioContext.currentTime;
         const gain = this.instruments[instrument];
         
+        // Ensure audio context is running
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+        
         // Create a new gain envelope for each note
         gain.gain.cancelScheduledValues(now);
         gain.gain.setValueAtTime(0, now);
         
-        // Trigger animation with interaction effects
+        // Trigger animation with Street Fighter style interactions
         const fightersContainer = document.querySelector('.fighters-container');
         const leftFighter = document.querySelector('.fighter-left');
         const rightFighter = document.querySelector('.fighter-right');
@@ -847,47 +779,74 @@ class JungleGenerator {
         // Add the sound trigger class
         fightersContainer.classList.add(`${instrument}-sound`);
         
-        // Add interaction effects based on the instrument
-        if (['kick', 'subkick', 'bass', 'reese'].includes(instrument)) {
-            // For strong attacks, make the other fighter react
-            if (instrument === 'kick' || instrument === 'subkick') {
-                rightFighter.classList.add('fighter-hit');
-                setTimeout(() => rightFighter.classList.remove('fighter-hit'), 300);
-            }
+        // Street Fighter style interactions with combo system
+        if (['kick', 'subkick'].includes(instrument)) {
+            // Heavy attacks
+            leftFighter.classList.add('attacking');
+            rightFighter.classList.add('hit');
+            this.shakeScreen('heavy');
+            
+            // Flash effect
+            this.flashEffect(fightersContainer);
+            
         } else if (['snare', 'clap'].includes(instrument)) {
-            // For punch moves, create a battle effect
-            fightersContainer.style.animation = 'lcd-battle 0.3s steps(1, end)';
-            setTimeout(() => fightersContainer.style.animation = '', 300);
+            // Quick attacks
+            rightFighter.classList.add('attacking');
+            leftFighter.classList.add('hit');
+            
+            // Battle effect
+            this.battleEffect(fightersContainer);
+            
+        } else if (['bass', 'reese'].includes(instrument)) {
+            // Special moves
+            const attacker = instrument === 'bass' ? rightFighter : leftFighter;
+            const defender = instrument === 'bass' ? leftFighter : rightFighter;
+            
+            attacker.classList.add('attacking', 'special');
+            defender.classList.add('hit');
+            this.shakeScreen('special');
+            this.specialEffect(attacker);
+            
+        } else if (['hihat', 'ride'].includes(instrument)) {
+            // Defensive moves
+            leftFighter.classList.add('blocking');
+            this.blockEffect(leftFighter);
         }
         
-        // Remove the sound trigger class
-        setTimeout(() => {
-            fightersContainer.classList.remove(`${instrument}-sound`);
-        }, 500);
-        
+        // Play the sound based on instrument type
         switch(instrument) {
-            // Pattern Maker 1 instruments
             case 'kick':
+            case 'subkick':
                 gain.gain.linearRampToValueAtTime(1, now + 0.001);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
                 break;
+                
             case 'snare':
+            case 'clap':
                 gain.gain.linearRampToValueAtTime(1, now + 0.001);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
                 break;
+                
             case 'hihat':
+            case 'ride':
                 gain.gain.linearRampToValueAtTime(1, now + 0.001);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
                 break;
+                
             case 'bass':
-                gain.gain.linearRampToValueAtTime(1, now + 0.001);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                break;
-            case 'overdrive':
+            case 'reese':
                 gain.gain.linearRampToValueAtTime(1, now + 0.001);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
                 break;
+                
+            case 'overdrive':
+            case 'wobble':
+                gain.gain.linearRampToValueAtTime(1, now + 0.001);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                break;
+                
             case 'vocal':
+            case 'vox':
                 if (!gain.osc.started) {
                     gain.osc.start();
                     gain.vibrato.start();
@@ -896,60 +855,15 @@ class JungleGenerator {
                 gain.gain.linearRampToValueAtTime(0.8, now + 0.001);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
                 break;
-            // Pattern Maker 2 instruments
-            case 'subkick':
-                gain.gain.linearRampToValueAtTime(1, now + 0.001);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-                gain.pitchEnv.gain.setValueAtTime(1, now);
-                gain.pitchEnv.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-                break;
-            case 'clap':
-                // Create new noise sources for each clap
-                const noise1 = this.audioContext.createBufferSource();
-                const noise2 = this.audioContext.createBufferSource();
-                noise1.buffer = gain.noiseBuffer;
-                noise2.buffer = gain.noiseBuffer;
-                
-                // Connect noise sources to envelope
-                noise1.connect(gain.envelope);
-                noise2.connect(gain.envelope);
-                
-                // Set up envelope
-                gain.envelope.gain.cancelScheduledValues(now);
-                gain.envelope.gain.setValueAtTime(0, now);
-                gain.envelope.gain.linearRampToValueAtTime(1, now + 0.001);
-                gain.envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-                
-                // Start noise sources
-                noise1.start(now);
-                noise2.start(now);
-                
-                // Set gain
-                gain.gain.linearRampToValueAtTime(1, now + 0.001);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-                break;
-            case 'ride':
-                gain.gain.linearRampToValueAtTime(1, now + 0.001);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-                break;
-            case 'reese':
-                gain.gain.linearRampToValueAtTime(1, now + 0.001);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-                break;
-            case 'wobble':
-                gain.gain.linearRampToValueAtTime(1, now + 0.001);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-                break;
-            case 'vox':
-                if (!gain.osc.started) {
-                    gain.osc.start();
-                    gain.vibrato.start();
-                    gain.osc.started = true;
-                }
-                gain.gain.linearRampToValueAtTime(0.8, now + 0.001);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-                break;
         }
+        
+        // Clean up classes
+        setTimeout(() => {
+            leftFighter.classList.remove('attacking', 'hit', 'blocking', 'special');
+            rightFighter.classList.remove('attacking', 'hit', 'blocking', 'special');
+            fightersContainer.style.animation = '';
+            fightersContainer.classList.remove(`${instrument}-sound`);
+        }, 500);
     }
     
     updateStepVisualization() {
@@ -1349,6 +1263,53 @@ class JungleGenerator {
             // Force a redraw of the visualization
             requestAnimationFrame(() => this.drawVisualizations());
         }
+    }
+
+    // Enhanced visual effects
+    shakeScreen(intensity = 'normal') {
+        const container = document.querySelector('.fighters-container');
+        container.style.animation = 'none';
+        container.offsetHeight; // Trigger reflow
+        
+        switch(intensity) {
+            case 'heavy':
+                container.style.animation = 'lcd-battle 0.2s steps(4, end) 3';
+                break;
+            case 'special':
+                container.style.animation = 'lcd-battle 0.3s steps(6, end) 4';
+                break;
+            default:
+                container.style.animation = 'lcd-battle 0.2s steps(4, end) 2';
+        }
+    }
+    
+    flashEffect(element) {
+        element.style.filter = 'brightness(1.5)';
+        setTimeout(() => {
+            element.style.filter = 'brightness(1.2)';
+            setTimeout(() => {
+                element.style.filter = '';
+            }, 50);
+        }, 50);
+    }
+    
+    battleEffect(container) {
+        container.style.animation = 'lcd-battle 0.3s steps(4, end)';
+        this.flashEffect(container);
+    }
+    
+    specialEffect(fighter) {
+        fighter.style.filter = 'hue-rotate(90deg) brightness(1.5)';
+        setTimeout(() => {
+            fighter.style.filter = '';
+        }, 300);
+    }
+    
+    blockEffect(fighter) {
+        fighter.style.filter = 'brightness(1.2) contrast(1.2)';
+        setTimeout(() => {
+            fighter.style.filter = '';
+        }, 200);
     }
 }
 
